@@ -3,7 +3,6 @@ package pinger
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ircop/dpinger/logger"
 	"github.com/sasha-s/go-deadlock"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
@@ -11,6 +10,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+	"log"
 )
 
 type PingResult struct {
@@ -41,7 +41,7 @@ type PingerDaemon struct {
 var Pinger PingerDaemon
 
 func (p *PingerDaemon) Init() error {
-	logger.Log("Initializing icmp listener")
+	//log.Print("Initializing icmp listener")
 
 	var err error
 	p.Listener, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -86,12 +86,12 @@ func (p *PingerDaemon) SendEchos(host string) (PingResult, error) {
 
 		wbuf, err := msg.Marshal(nil)
 		if err != nil {
-			logger.Err("Cannot marshal icmp message: %s", err.Error())
+			//log.Print("Cannot marshal icmp message: %s", err.Error())
 			continue
 		}
 
 		if _, err := p.Listener.WriteTo(wbuf, &net.IPAddr{IP: ip}); err != nil {
-			logger.Err("Failed to write net: %s", err.Error())
+			//log.Print("Failed to write net: %s", err.Error())
 		}
 		time.Sleep(time.Second)
 	}
@@ -117,7 +117,7 @@ func (p *PingerDaemon) listen() {
 		//var buf []byte
 		n, peer, err := p.Listener.ReadFrom(buf)
 		if err != nil {
-			logger.Err("Failed to read: %s", err.Error())
+			log.Fatal("Failed to read: %s", err.Error())
 			continue
 		}
 
@@ -125,13 +125,13 @@ func (p *PingerDaemon) listen() {
 			now := time.Now().UnixNano()
 			defer func() {
 				if r := recover(); r != nil {
-					logger.Panic("Recovered in listen(): %+v\n%s", r, debug.Stack())
+					log.Fatal("Recovered in listen(): %+v\n%s", r, debug.Stack())
 				}
 			}()
 
 			parsed, err := icmp.ParseMessage(1, payload[:n])
 			if err != nil {
-				logger.Err("Unable to parse ICMP message: %s", err.Error())
+				log.Fatal("Unable to parse ICMP message: %s", err.Error())
 				return
 			}
 
